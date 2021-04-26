@@ -42,4 +42,37 @@ router.post('/register', async (req, res) =>{
     };
 });
 
-module.exports = router
+router.post('/login', async (req, res) => {
+    try {
+        //1. destructure req.body
+
+        const {email, password} = req.body
+
+        //2. check if user doesnt exist (if not throw error)
+
+        const user = await pool.query("SELECT * FROM users WHERE user_email = $1", [
+            email
+        ]);
+
+        if(user.rows.length === 0){
+            return res.status(401).json("Password or Email is incorrect")
+        };
+
+        //3. check if incoming password is the same as database password
+
+        const validPassword = await bcrypt.compare(password, user.rows[0].user_password);
+        
+        if (!validPassword) {
+            return res.status(401).json("Password or Email is incorrect")
+        };
+
+        //4. give them jwt token
+        const token = jwtGenerator(user.rows[0].user_id);
+
+        res.json({token})
+    } catch (error) {
+        console.error(error.message)
+    };
+});
+
+module.exports = router;
